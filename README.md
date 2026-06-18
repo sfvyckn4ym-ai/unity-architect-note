@@ -27,10 +27,10 @@ Unityゲーム開発における「アーキテクチャのスパゲティ化」
 * **データ管理:** 外部サーバーは使わず、Git管理が容易なローカル完結型（JSON）とする。
 
 ### 【受け入れ基準】
-1.  `React Flow` を用い、ノードの追加・削除・線での結合が正常に動作すること。
-2.  ノードから1クリックでタスク（カンバンカード）を生成でき、相互にデータが同期されること。
-3.  各タスクにストップウォッチ機能があり、計測された累積時間が分単位でデータ保存されること。
-4.  アプリ終了後も、キャンバスの配置とタスク状態が次回起動時に完全に復元されること。
+1. `React Flow` を用い、ノードの追加・削除・線での結合が正常に動作すること。
+2. ノードから1クリックでタスク（カンバンカード）を生成でき、相互にデータが同期されること。
+3. 各タスクにストップウォッチ機能があり、計測された累積時間が分単位でデータ保存されること。
+4. アプリ終了後も、キャンバスの配置とタスク状態が次回起動時に完全に復元されること。
 
 ### 【非目標（スコープ外）】
 * C#コードを自動スキャンして依存関係を自動描画する機能（手動マッピングに限定）。
@@ -70,6 +70,7 @@ flowchart TD
     UC_Canvas -.->|include| UC_Save
     UC_Task -.->|include| UC_Save
 
+    ### ② クラス図
     classDiagram
     direction LR
     class Project {
@@ -119,7 +120,8 @@ flowchart TD
     Node "0..1" --> "0..1" Task : generates
     Task "1" *-- "0..*" TimeLog : records
 
-    sequenceDiagram
+     ### ③ シーケンス図
+     sequenceDiagram
     autonumber
     actor Developer as ゲーム開発者
     participant UI as 画面 (React)
@@ -147,6 +149,7 @@ flowchart TD
         UI -->> Developer: タイマー表示更新
     end
 
+    ### ④ 状態遷移図
     stateDiagram-v2
     [*] --> ProjectSelection : アプリ起動
     ProjectSelection --> CanvasView : プロジェクト選択
@@ -172,5 +175,3 @@ flowchart TD
     
     TaskBoardView --> CanvasView : 画面切り替え
     CanvasView --> [*] : アプリ終了
-
-    
