@@ -1,41 +1,37 @@
-# Unityアーキテクト・ノート (Unity Architect Note)
+# Unityアーキテクト・ノート モバイル・同期 (Unity Architect Note - Mobile Sync)
 
-Unityゲーム開発におけるスクリプトの依存関係・設計図（フローチャート）と、実装タスク・作業時間を1つのキャンバス上で一元管理できる開発支援デスクトップアプリケーション。
+Unityゲーム開発におけるスクリプトの依存関係・設計図（フローチャート）を管理しつつ、PCで記述したC#コードをクラウド経由でスマートフォンに同期し、外出先や電車内でもコードの確認・編集、およびタスク・時間管理ができるレスポンス対応Webアプリケーション。
 
 ---
 
 ## 1. 要件定義
 
 ### 【目的】
-Unityゲーム開発における「アーキテクチャのスパゲティ化」と「実装タスクの不一致」を解消する。設計図と実装コード、それに紐づくタスクと作業時間を可視化し、開発効率の向上と工数見積もりの精度向上を目的とする。
+PCの前にいない時間（移動中など）でもUnityの設計やC#コードの確認・修正を進められる環境を提供する。設計図と実装コード、タスクをクラウドで一元化し、開発者の隙間時間を有効活用することを目的とする。
 
 ### 【利用者の入出力】
 * **入力:**
-    * キャンバス上でのノード作成（クラス名、シーン名等の入力）と接続。
-    * タスク情報（タスク名、予定時間、進捗ステータス）。
-    * タイマーの開始/停止クリック。
-    * 関連付けるUnityのC#スクリプト名（手動入力）。
+    * PC/スマホからのノード作成・接続、およびC#コードの貼り付け・編集。
+    * タスク情報（タスク名、ステータス）の更新、タイマーの開始/停止。
 * **出力:**
-    * 視覚化されたノード構造図（関係性マップ）。
-    * カンバン形式のタスク一覧および予定vs実績時間。
-    * プロジェクトごとの管理データファイル（JSON形式）。
+    * クラウド（Supabase）経由でPC・スマホ間で完全同期されたノードマップとC#コード。
+    * レスポンシブ対応したカンバン画面、作業時間の計測ログ。
 
 ### 【制約】
 * **開発期間:** 4週間（MVP開発）
-* **稼働環境:** Windows / macOS（Tauriフレームワークによるクロスプラットフォーム）
-* **動作負荷:** Unityエディタと同時起動するため、メモリ消費量を常時100MB以下に抑える。
-* **データ管理:** 外部サーバーは使わず、Git管理が容易なローカル完結型（JSON）とする。
+* **稼働環境:** Webブラウザ（PC / iOS / Android）
+* **データ管理:** PC・スマホ間同期を実現するため、BaaS（Supabase）を利用したクラウド集中管理。
+* **UI制限:** スマホの小画面に対応するため、モバイル表示時はノードマップをリスト/ツリー形式に自動最適化する。
 
 ### 【受け入れ基準】
-1. `React Flow` を用い、ノードの追加・削除・線での結合が正常に動作すること。
-2. ノードから1クリックでタスク（カンバンカード）を生成でき、相互にデータが同期されること。
-3. 各タスクにストップウォッチ機能があり、計測された累積時間が分単位でデータ保存されること。
-4. アプリ終了後も、キャンバスの配置とタスク状態が次回起動時に完全に復元されること。
+1. PCで入力したノード情報とC#コードが、スマホ側を開いた際にリアルタイム（数秒以内）で同期・表示されること。
+2. スマホの画面からC#コードのテキスト編集・保存ができ、PC側にも反映されること。
+3. モバイル環境でもカンバンタスクのステータス変更、およびタイマーによる時間計測・保存が正常に動作すること。
 
 ### 【非目標（スコープ外）】
-* C#コードを自動スキャンして依存関係を自動描画する機能（手動マッピングに限定）。
-* アプリ内からのGitコミットやプッシュ、コンフリクト解消機能。
-* 複数ユーザーによる同一キャンバスのリアルタイム同時編集機能。
+* Unityエディタとの直接的なローカルファイル自動同期（今回はブラウザへのコピペ運用に限定）。
+* Gitリポジトリとの直接連携（コミット、プッシュ等の機能）。
+* オフライン環境での完全同期（ネットワーク接続が必須の仕様とする）。
 
 ---
 
@@ -48,130 +44,87 @@ flowchart TD
         Developer((ゲーム開発者))
     end
 
-    subgraph App [Unityアーキテクト・ノート]
-        UC_Proj[プロジェクトを管理する]
-        UC_Canvas[設計図を編集する]
-        UC_Node[ノードを操作する]
-        UC_Link[C#スクリプトを紐付ける]
-        UC_Task[タスクを管理する]
-        UC_GenTask[ノードからタスクを生成する]
-        UC_Time[作業時間を計測する]
-        UC_Save[データを自動保存する]
+    subgraph App [Unityアーキテクト・ノート Web]
+        UC_Sync[PC・スマホ間でデータを同期する]
+        UC_Canvas[設計図・コードを閲覧する]
+        UC_Edit[C#コードを編集する]
+        UC_Task[タスク・タイマーを管理する]
     end
 
-    Developer --> UC_Proj
     Developer --> UC_Canvas
+    Developer --> UC_Edit
     Developer --> UC_Task
 
-    UC_Canvas -.->|include| UC_Node
-    UC_Node -.->|extend| UC_Link
-    UC_Node -.->|extend| UC_GenTask
-    UC_Task -.->|include| UC_Time
-    UC_Canvas -.->|include| UC_Save
-    UC_Task -.->|include| UC_Save
+    UC_Canvas -.->|include| UC_Sync
+    UC_Edit -.->|include| UC_Sync
+    UC_Task -.->|include| UC_Sync
+
 
     ### ② クラス図
     classDiagram
     direction LR
+    class User {
+        +string id
+        +string email
+    }
     class Project {
         +string id
+        +string userId
         +string name
-        +string unityProjectPath
-        +DateTime createdAt
-        +save() void
-    }
-    class Canvas {
-        +string id
-        +float zoom
-        +float[2] position
+        +DateTime updatedAt
     }
     class Node {
         +string id
+        +string projectId
         +string label
-        +string type
+        +string codeSnippet
         +float[2] position
-        +string scriptPath
-        +string notes
-    }
-    class Edge {
-        +string id
-        +string sourceNodeId
-        +string targetNodeId
     }
     class Task {
         +string id
         +string nodeId
         +string title
         +string status
-        +int estimatedMinutes
         +int actualMinutes
-        +bool isTimerRunning
-    }
-    class TimeLog {
-        +string id
-        +DateTime startTime
-        +int durationMinutes
     }
 
-    Project "1" *-- "1" Canvas : contains
+    User "1" *-- "0..*" Project : owns
+    Project "1" *-- "0..*" Node : contains
     Project "1" *-- "0..*" Task : tracks
-    Canvas "1" *-- "0..*" Node : contains
-    Canvas "1" *-- "0..*" Edge : contains
-    Node "0..1" --> "0..1" Task : generates
-    Task "1" *-- "0..*" TimeLog : records
+    Node "0..1" --> "0..1" Task : links
 
      ### ③ シーケンス図
      sequenceDiagram
     autonumber
-    actor Developer as ゲーム開発者
-    participant UI as 画面 (React)
-    participant Ctrl as コントローラ (Tauri)
-    participant Model as モデル (JSON File)
+    actor Dev as 開発者 (スマホ/電車内)
+    participant UI as スマホ画面 (Next.js)
+    participant DB as クラウド (Supabase)
+    participant PC as PC画面 (ブラウザ)
 
-    Note over Developer, Model: 【タスク生成フロー】
-    Developer ->> UI: ノードを右クリック ➔ 「タスク生成」
-    UI ->> Ctrl: taskCreationRequest(nodeId, nodeLabel)
-    Ctrl ->> Model: 既存タスクの有無を検証
-    alt 未存在の場合
-        Ctrl ->> Model: createTask(nodeId, title, status="Todo")
-        Ctrl -->> UI: タスク生成成功通知
-        UI -->> Developer: カンバンに表示
-    else 存在する場合
-        Ctrl -->> UI: エラー通知
-    end
-
-    Note over Developer, Model: 【タイマー計測フロー】
-    Developer ->> UI: 「タイマー開始」をクリック
-    UI ->> Ctrl: toggleTimerRequest(taskId)
-    loop 1分ごとの定期処理
-        Ctrl ->> Model: incrementActualMinutes(taskId, +1)
-        Ctrl -->> UI: 最新の実績時間をプッシュ
-        UI -->> Developer: タイマー表示更新
-    end
+    Note over Dev, PC: 【出先でのコード編集と同期フロー】
+    Dev ->> UI: アプリを開きコード確認
+    UI ->> DB: FetchLatestData(projectId)
+    DB -->> UI: C#コード・ノード情報返却
+    Dev ->> UI: コードを編集・保存ボタン押下
+    UI ->> DB: UpdateCodeSnippet(nodeId, newCode)
+    DB -->> UI: 保存完了通知
+    
+    Note over DB, PC: 【PC側での確認】
+    PC ->> DB: 定期ポーリング / リアルタイム購読
+    DB -->> PC: スマホ側での変更を検知・自動更新
+    PC -->> PC: 画面上のC#コードが最新化される
 
     ### ④ 状態遷移図
     stateDiagram-v2
-    [*] --> ProjectSelection : アプリ起動
-    ProjectSelection --> CanvasView : プロジェクト選択
+    [*] --> LoginScreen : アプリ起動
+    LoginScreen --> ProjectDashboard : 認証成功
     
-    state CanvasView {
-        [*] --> Idle
-        Idle --> NodeEditing : ノード追加/編集
-        NodeEditing --> Idle : 保存
+    state ProjectDashboard {
+        [*] --> ViewMode : プロジェクト選択
+        ViewMode --> CodeEditingMode : コード編集開始 (PC/スマホ)
+        CodeEditingMode --> ViewMode : 保存・同期完了
+        ViewMode --> TaskTimerMode : タイマー開始
+        TaskTimerMode --> ViewMode : タイマー停止・実績保存
     }
     
-    CanvasView --> TaskBoardView : 画面切り替え
-    
-    state TaskBoardView {
-        [*] --> Todo
-        Todo --> Progress : タスク着手
-        state Progress {
-            [*] --> TimerOff
-            TimerOff --> TimerRunning : タイマー開始
-            TimerRunning --> TimerOff : タイマー停止
-        }
-        Progress --> Done : タスク完了
-    }
-    
-    TaskBoardView --> CanvasView : 画面切り替え
-    CanvasView --> [*] : アプリ終了
+    ProjectDashboard --> [*] : ログアウト
