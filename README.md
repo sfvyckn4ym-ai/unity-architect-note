@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Unity Architect Note
 
-## Getting Started
+Unity Architect Noteは、Unityゲーム開発で使用するC#スクリプトをクラウド経由でWebアプリと同期し、PCやスマートフォンからコード確認・編集、タスク管理を行える開発支援ツールです。
 
-First, run the development server:
+## 概要
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+本システムでは、Unity Editor拡張からUnityプロジェクト内のC#スクリプトをSupabaseへアップロードし、Next.jsで作成したWebアプリ上でコードを確認・編集できます。
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Webアプリで編集したコードは、Unity Editor拡張のDownload & Apply機能によってUnityプロジェクト内の.csファイルへ反映できます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 主な機能
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- ユーザー登録・ログイン
+- プロジェクト作成
+- C#コードファイル登録
+- C#コード表示
+- C#コード編集・保存
+- タスク追加
+- タスクステータス管理
+- Unity EditorからC#コードをSupabaseへアップロード
+- Webで編集したC#コードをUnityへ反映
+- 上書き前のバックアップ作成
+- Unity Editor拡張の設定保存
 
-## Learn More
+## 使用技術
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Supabase
+- PostgreSQL
+- Supabase Authentication
+- Unity
+- C#
+- Unity Editor拡張
+- Visual Studio Code
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## データベース
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+使用した主なテーブルは以下です。
 
-## Deploy on Vercel
+- projects
+- code_files
+- tasks
+- time_logs
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Unity連携の流れ
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+Unity Editor
+↓
+C#スクリプトをSupabaseへアップロード
+↓
+Webアプリでコードを確認・編集
+↓
+Supabaseに保存
+↓
+Unity EditorでDownload & Apply
+↓
+Unityプロジェクト内の.csファイルへ反映
