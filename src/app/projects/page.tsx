@@ -71,6 +71,26 @@ export default function ProjectsPage() {
     fetchProjects();
   };
 
+  const deleteProject = async (projectId: string) => {
+  const ok = confirm(
+    "このプロジェクトを削除しますか？ 関連するコードファイルやタスクも削除されます。"
+  );
+
+  if (!ok) return;
+
+  const { error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  fetchProjects();
+};
+
   const signOut = async () => {
     await supabase.auth.signOut();
     location.href = "/login";
@@ -130,18 +150,27 @@ export default function ProjectsPage() {
             </p>
           ) : (
             <div className="grid gap-4">
-              {projects.map((project) => (
-                <Link
-                  key={project.id}
-                  href={`/projects/${project.id}`}
-                  className="block rounded-2xl border border-slate-800 bg-slate-900 p-5 hover:bg-slate-800"
-                >
-                  <h3 className="text-lg font-bold">{project.name}</h3>
-                  <p className="text-sm text-slate-400">
-                    作成日: {new Date(project.created_at).toLocaleString()}
-                  </p>
-                </Link>
-              ))}
+        {projects.map((project) => (
+  <div
+    key={project.id}
+    className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4"
+  >
+<Link href={`/projects/${project.id}`}>
+  <h3 className="text-lg font-bold">{project.name}</h3>
+
+      <p className="text-sm text-slate-400">
+        作成日: {new Date(project.created_at).toLocaleString()}
+      </p>
+    </Link>
+
+    <button
+      onClick={() => deleteProject(project.id)}
+      className="rounded-lg border border-red-500 px-4 py-2 text-sm text-red-400 hover:bg-red-950"
+    >
+      プロジェクト削除
+    </button>
+  </div>
+))}
             </div>
           )}
         </section>

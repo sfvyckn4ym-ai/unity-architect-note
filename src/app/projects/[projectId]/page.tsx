@@ -283,6 +283,24 @@ const stopTaskTimer = async (task: Task) => {
   return () => clearInterval(timer);
 }, []);
 
+const deleteTask = async (taskId: string) => {
+  const ok = confirm("このタスクを削除しますか？");
+
+  if (!ok) return;
+
+  const { error } = await supabase
+    .from("tasks")
+    .delete()
+    .eq("id", taskId);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  fetchTasks();
+};
+
 const parentTasks = tasks.filter((task) => task.parent_task_id === null);
 
 const getChildTasks = (parentTaskId: string) => {
@@ -454,19 +472,36 @@ const getChildTasks = (parentTaskId: string) => {
       {parentTasks.map((parentTask) => {
         const childTasks = getChildTasks(parentTask.id);
 
-        const todoTasks = childTasks.filter((task) => task.status === "todo");
-        const doingTasks = childTasks.filter((task) => task.status === "doing");
-        const doneTasks = childTasks.filter((task) => task.status === "done");
+       const todoTasks = childTasks
+  .filter((task) => task.status === "todo")
+  .sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+const doingTasks = childTasks
+  .filter((task) => task.status === "doing")
+  .sort(
+    (a, b) =>
+      new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
+  );
+
+const doneTasks = childTasks
+  .filter((task) => task.status === "done")
+  .sort(
+    (a, b) =>
+      new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
+  );
 
         return (
           <div
             key={parentTask.id}
             className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4"
           >
-            <div>
-              <p className="text-xs text-blue-400 font-semibold">大タスク</p>
-              <h3 className="text-2xl font-bold">{parentTask.title}</h3>
-            </div>
+           <div>
+  <p className="text-xs text-blue-400 font-semibold">大タスク</p>
+  <h3 className="text-2xl font-bold">{parentTask.title}</h3>
+</div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <TaskColumn
@@ -477,6 +512,7 @@ const getChildTasks = (parentTaskId: string) => {
   onChangeStatus={updateTaskStatus}
   onStartTimer={startTaskTimer}
   onStopTimer={stopTaskTimer}
+  onDeleteTask={deleteTask}
   now={now}
 />
 
@@ -488,6 +524,7 @@ const getChildTasks = (parentTaskId: string) => {
   onChangeStatus={updateTaskStatus}
   onStartTimer={startTaskTimer}
   onStopTimer={stopTaskTimer}
+  onDeleteTask={deleteTask}
   now={now}
 />
 
@@ -499,6 +536,7 @@ const getChildTasks = (parentTaskId: string) => {
   onChangeStatus={updateTaskStatus}
   onStartTimer={startTaskTimer}
   onStopTimer={stopTaskTimer}
+  onDeleteTask={deleteTask}
   now={now}
 />
             </div>
@@ -548,8 +586,10 @@ type TaskColumnProps = {
   ) => void;
   onStartTimer: (taskId: string) => void;
   onStopTimer: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
   now: Date;
 };
+``
 
 function TaskColumn({
   title,
@@ -559,6 +599,7 @@ function TaskColumn({
   onChangeStatus,
   onStartTimer,
   onStopTimer,
+  onDeleteTask,
   now,
 }: TaskColumnProps) {
   return (
@@ -607,14 +648,23 @@ function TaskColumn({
     </button>
   )}
 
- {!task.current_timer_started_at && (
-  <button
-    onClick={() => onChangeStatus(task.id, nextStatus)}
-    className="w-full rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800"
-  >
-    {nextLabel}
-  </button>
-)}
+  {!task.current_timer_started_at && (
+    <button
+      onClick={() => onChangeStatus(task.id, nextStatus)}
+      className="w-full rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800"
+    >
+      {nextLabel}
+    </button>
+  )}
+
+  {!task.current_timer_started_at && (
+    <button
+      onClick={() => onDeleteTask(task.id)}
+      className="w-full rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400 hover:bg-red-950"
+    >
+      削除
+    </button>
+  )}
 </div>
             </div>
           ))}
