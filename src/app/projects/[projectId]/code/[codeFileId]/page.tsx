@@ -11,6 +11,7 @@ type CodeFile = {
   unity_path: string;
   file_name: string;
   content: string;
+  description: string;
   updated_at: string;
 };
 
@@ -22,6 +23,7 @@ export default function CodeEditPage() {
 
   const [codeFile, setCodeFile] = useState<CodeFile | null>(null);
   const [content, setContent] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -50,9 +52,10 @@ export default function CodeEditPage() {
       return;
     }
 
-    setCodeFile(data);
-    setContent(data.content);
-    setLoading(false);
+      setCodeFile(data);
+      setContent(data.content);
+      setDescription(data.description ?? "");
+      setLoading(false);
   };
 
   const saveCode = async () => {
@@ -63,10 +66,11 @@ export default function CodeEditPage() {
     const { error } = await supabase
       .from("code_files")
       .update({
-        content,
-        last_synced_from: "web",
-        updated_at: new Date().toISOString(),
-      })
+  content,
+  description,
+  last_synced_from: "web",
+  updated_at: new Date().toISOString(),
+})
       .eq("id", codeFile.id);
 
     setSaving(false);
@@ -136,13 +140,31 @@ export default function CodeEditPage() {
               {saving ? "保存中..." : "保存"}
             </button>
           </div>
+          <div className="space-y-2">
+  <label className="text-sm font-semibold text-slate-300">
+    コードの説明
+  </label>
 
-          <textarea
-            className="h-[70vh] w-full resize-none rounded-lg border border-slate-700 bg-slate-950 p-4 font-mono text-sm leading-relaxed text-white outline-none focus:border-blue-500"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            spellCheck={false}
-          />
+  <textarea
+    className="min-h-32 w-full resize-none rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm leading-relaxed text-white outline-none focus:border-blue-500"
+    placeholder="例：プレイヤーの移動、ジャンプ、吹っ飛ばし処理を管理するスクリプト。"
+    value={description}
+    onChange={(e) => setDescription(e.target.value)}
+  />
+</div>
+
+          <div className="space-y-2">
+  <label className="text-sm font-semibold text-slate-300">
+    C#コード
+  </label>
+
+  <textarea
+    className="h-[70vh] w-full resize-none rounded-lg border border-slate-700 bg-slate-950 p-4 font-mono text-sm leading-relaxed text-white outline-none focus:border-blue-500"
+    value={content}
+    onChange={(e) => setContent(e.target.value)}
+    spellCheck={false}
+  />
+</div>
         </section>
       </div>
     </main>

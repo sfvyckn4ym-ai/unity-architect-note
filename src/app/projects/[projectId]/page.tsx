@@ -22,9 +22,12 @@ type CodeFile = {
 type Task = {
   id: string;
   project_id: string;
+  parent_task_id: string | null;
   title: string;
+  description: string;
   status: "todo" | "doing" | "done";
   actual_minutes: number;
+  current_timer_started_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -41,7 +44,9 @@ export default function ProjectDetailPage() {
   const [fileName, setFileName] = useState("");
   const [content, setContent] = useState("");
 
-  const [taskTitle, setTaskTitle] = useState("");
+  const [parentTaskTitle, setParentTaskTitle] = useState("");
+  const [childTaskTitle, setChildTaskTitle] = useState("");
+  const [selectedParentTaskId, setSelectedParentTaskId] = useState("");
 
   const [loading, setLoading] = useState(true);
 
@@ -135,26 +140,54 @@ export default function ProjectDetailPage() {
     fetchCodeFiles();
   };
 
-  const createTask = async () => {
-    if (!taskTitle.trim()) {
-      alert("タスク名を入力してください。");
-      return;
-    }
+  const createParentTask = async () => {
+  if (!parentTaskTitle.trim()) {
+    alert("大タスク名を入力してください。");
+    return;
+  }
 
-    const { error } = await supabase.from("tasks").insert({
-      project_id: projectId,
-      title: taskTitle,
-      status: "todo",
-    });
+  const { error } = await supabase.from("tasks").insert({
+    project_id: projectId,
+    title: parentTaskTitle,
+    status: "todo",
+    parent_task_id: null,
+  });
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
-    setTaskTitle("");
-    fetchTasks();
-  };
+  setParentTaskTitle("");
+  fetchTasks();
+};
+
+const createChildTask = async () => {
+  if (!selectedParentTaskId) {
+    alert("大タスクを選択してください。");
+    return;
+  }
+
+  if (!childTaskTitle.trim()) {
+    alert("小タスク名を入力してください。");
+    return;
+  }
+
+  const { error } = await supabase.from("tasks").insert({
+    project_id: projectId,
+    title: childTaskTitle,
+    status: "todo",
+    parent_task_id: selectedParentTaskId,
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setChildTaskTitle("");
+  fetchTasks();
+};
 
   const updateTaskStatus = async (
     taskId: string,
@@ -180,9 +213,11 @@ export default function ProjectDetailPage() {
     loadData();
   }, [projectId]);
 
-  const todoTasks = tasks.filter((task) => task.status === "todo");
-  const doingTasks = tasks.filter((task) => task.status === "doing");
-  const doneTasks = tasks.filter((task) => task.status === "done");
+const parentTasks = tasks.filter((task) => task.parent_task_id === null);
+
+const getChildTasks = (parentTaskId: string) => {
+  return tasks.filter((task) => task.parent_task_id === parentTaskId);
+};
 
   if (loading) {
     return (
@@ -278,55 +313,122 @@ export default function ProjectDetailPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
-          <h2 className="text-xl font-bold">タスク追加</h2>
+        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-6">
+  <h2 className="text-xl font-bold">タスク追加</h2>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
-              placeholder="例：PlayerControllerの移動処理を作る"
-              value={taskTitle}
-              onChange={(e) => setTaskTitle(e.target.value)}
-            />
+  <div className="space-y-3">
+    <h3 className="font-semibold">大タスクを追加</h3>
 
-            <button
-              onClick={createTask}
-              className="rounded-lg bg-blue-600 px-5 py-3 font-bold hover:bg-blue-500"
-            >
-              追加
-            </button>
-          </div>
-        </section>
+    <div className="flex flex-col sm:flex-row gap-3">
+      <input
+        className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+        placeholder="例：レベルデザイン"
+        value={parentTaskTitle}
+        onChange={(e) => setParentTaskTitle(e.target.value)}
+      />
+
+      <button
+        onClick={createParentTask}
+        className="rounded-lg bg-blue-600 px-5 py-3 font-bold hover:bg-blue-500"
+      >
+        大タスク追加
+      </button>
+    </div>
+  </div>
+
+  <div className="space-y-3">
+    <h3 className="font-semibold">小タスクを追加</h3>
+
+    <div className="grid gap-3">
+      <select
+        className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+        value={selectedParentTaskId}
+        onChange={(e) => setSelectedParentTaskId(e.target.value)}
+      >
+        <option value="">大タスクを選択</option>
+        {parentTasks.map((task) => (
+          <option key={task.id} value={task.id}>
+            {task.title}
+          </option>
+        ))}
+      </select>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <input
+          className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+          placeholder="例：ステージ1の敵配置を作る"
+          value={childTaskTitle}
+          onChange={(e) => setChildTaskTitle(e.target.value)}
+        />
+
+        <button
+          onClick={createChildTask}
+          className="rounded-lg bg-blue-600 px-5 py-3 font-bold hover:bg-blue-500"
+        >
+          小タスク追加
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-bold">タスク管理</h2>
+  <h2 className="text-xl font-bold">タスク管理</h2>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <TaskColumn
-              title="未着手"
-              tasks={todoTasks}
-              nextLabel="作業中へ"
-              nextStatus="doing"
-              onChangeStatus={updateTaskStatus}
-            />
+  {parentTasks.length === 0 ? (
+    <p className="text-slate-400">
+      まだ大タスクがありません。
+    </p>
+  ) : (
+    <div className="space-y-5">
+      {parentTasks.map((parentTask) => {
+        const childTasks = getChildTasks(parentTask.id);
 
-            <TaskColumn
-              title="作業中"
-              tasks={doingTasks}
-              nextLabel="完了へ"
-              nextStatus="done"
-              onChangeStatus={updateTaskStatus}
-            />
+        const todoTasks = childTasks.filter((task) => task.status === "todo");
+        const doingTasks = childTasks.filter((task) => task.status === "doing");
+        const doneTasks = childTasks.filter((task) => task.status === "done");
 
-            <TaskColumn
-              title="完了"
-              tasks={doneTasks}
-              nextLabel="未着手へ戻す"
-              nextStatus="todo"
-              onChangeStatus={updateTaskStatus}
-            />
+        return (
+          <div
+            key={parentTask.id}
+            className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4"
+          >
+            <div>
+              <p className="text-xs text-blue-400 font-semibold">大タスク</p>
+              <h3 className="text-2xl font-bold">{parentTask.title}</h3>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <TaskColumn
+                title="未着手"
+                tasks={todoTasks}
+                nextLabel="作業中へ"
+                nextStatus="doing"
+                onChangeStatus={updateTaskStatus}
+              />
+
+              <TaskColumn
+                title="作業中"
+                tasks={doingTasks}
+                nextLabel="完了へ"
+                nextStatus="done"
+                onChangeStatus={updateTaskStatus}
+              />
+
+              <TaskColumn
+                title="完了"
+                tasks={doneTasks}
+                nextLabel="未着手へ戻す"
+                nextStatus="todo"
+                onChangeStatus={updateTaskStatus}
+              />
+            </div>
           </div>
-        </section>
+        );
+      })}
+    </div>
+  )}
+</section>
       </div>
     </main>
   );
