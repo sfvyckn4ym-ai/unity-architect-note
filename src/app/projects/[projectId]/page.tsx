@@ -49,6 +49,7 @@ export default function ProjectDetailPage() {
   const [selectedParentTaskId, setSelectedParentTaskId] = useState("");
 
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(new Date());
 
   const fetchProject = async () => {
     const { data, error } = await supabase
@@ -189,29 +190,98 @@ const createChildTask = async () => {
   fetchTasks();
 };
 
-  const updateTaskStatus = async (
-    taskId: string,
-    nextStatus: "todo" | "doing" | "done"
-  ) => {
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        status: nextStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", taskId);
+ const updateTaskStatus = async (
+  taskId: string,
+  nextStatus: "todo" | "doing" | "done"
+) => {
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      status: nextStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", taskId);
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
-    fetchTasks();
-  };
+  fetchTasks();
+};
+
+const startTaskTimer = async (taskId: string) => {
+  const startedAt = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      status: "doing",
+      current_timer_started_at: startedAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", taskId);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  fetchTasks();
+};
+
+const stopTaskTimer = async (task: Task) => {
+  if (!task.current_timer_started_at) {
+    alert("タイマーが開始されていません。");
+    return;
+  }
+
+  const startedAt = new Date(task.current_timer_started_at);
+  const endedAt = new Date();
+
+  const diffMs = endedAt.getTime() - startedAt.getTime();
+  const durationMinutes = Math.max(1, Math.ceil(diffMs / 1000 / 60));
+
+  const { error: logError } = await supabase.from("time_logs").insert({
+    task_id: task.id,
+    started_at: startedAt.toISOString(),
+    ended_at: endedAt.toISOString(),
+    duration_minutes: durationMinutes,
+  });
+
+  if (logError) {
+    alert(logError.message);
+    return;
+  }
+
+  const { error: taskError } = await supabase
+    .from("tasks")
+    .update({
+      actual_minutes: task.actual_minutes + durationMinutes,
+      current_timer_started_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", task.id);
+
+  if (taskError) {
+    alert(taskError.message);
+    return;
+  }
+
+  fetchTasks();
+};
 
   useEffect(() => {
     loadData();
   }, [projectId]);
+
+  useEffect(() => {
+  const timer = setInterval(() => {
+    setNow(new Date());
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, []);
 
 const parentTasks = tasks.filter((task) => task.parent_task_id === null);
 
@@ -400,28 +470,37 @@ const getChildTasks = (parentTaskId: string) => {
 
             <div className="grid gap-4 md:grid-cols-3">
               <TaskColumn
-                title="未着手"
-                tasks={todoTasks}
-                nextLabel="作業中へ"
-                nextStatus="doing"
-                onChangeStatus={updateTaskStatus}
-              />
+  title="未着手"
+  tasks={todoTasks}
+  nextLabel="作業中へ"
+  nextStatus="doing"
+  onChangeStatus={updateTaskStatus}
+  onStartTimer={startTaskTimer}
+  onStopTimer={stopTaskTimer}
+  now={now}
+/>
 
               <TaskColumn
-                title="作業中"
-                tasks={doingTasks}
-                nextLabel="完了へ"
-                nextStatus="done"
-                onChangeStatus={updateTaskStatus}
-              />
+  title="作業中"
+  tasks={doingTasks}
+  nextLabel="完了へ"
+  nextStatus="done"
+  onChangeStatus={updateTaskStatus}
+  onStartTimer={startTaskTimer}
+  onStopTimer={stopTaskTimer}
+  now={now}
+/>
 
               <TaskColumn
-                title="完了"
-                tasks={doneTasks}
-                nextLabel="未着手へ戻す"
-                nextStatus="todo"
-                onChangeStatus={updateTaskStatus}
-              />
+  title="完了"
+  tasks={doneTasks}
+  nextLabel="未着手へ戻す"
+  nextStatus="todo"
+  onChangeStatus={updateTaskStatus}
+  onStartTimer={startTaskTimer}
+  onStopTimer={stopTaskTimer}
+  now={now}
+/>
             </div>
           </div>
         );
@@ -434,6 +513,30 @@ const getChildTasks = (parentTaskId: string) => {
   );
 }
 
+
+
+function formatMinutes(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  if (hours === 0) {
+    return `${mins}分`;
+  }
+
+  return `${hours}時間${mins}分`;
+}
+
+function formatRunningTime(startedAt: string, now: Date) {
+  const start = new Date(startedAt);
+  const diffMs = now.getTime() - start.getTime();
+
+  const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}分${seconds}秒`;
+}
+
 type TaskColumnProps = {
   title: string;
   tasks: Task[];
@@ -443,6 +546,9 @@ type TaskColumnProps = {
     taskId: string,
     nextStatus: "todo" | "doing" | "done"
   ) => void;
+  onStartTimer: (taskId: string) => void;
+  onStopTimer: (task: Task) => void;
+  now: Date;
 };
 
 function TaskColumn({
@@ -451,6 +557,9 @@ function TaskColumn({
   nextLabel,
   nextStatus,
   onChangeStatus,
+  onStartTimer,
+  onStopTimer,
+  now,
 }: TaskColumnProps) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 space-y-3">
@@ -468,15 +577,45 @@ function TaskColumn({
               <p className="font-semibold">{task.title}</p>
 
               <p className="text-xs text-slate-500">
-                作成日: {new Date(task.created_at).toLocaleString()}
-              </p>
+  作成日: {new Date(task.created_at).toLocaleString()}
+</p>
 
-              <button
-                onClick={() => onChangeStatus(task.id, nextStatus)}
-                className="w-full rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800"
-              >
-                {nextLabel}
-              </button>
+<p className="text-xs text-slate-400">
+  累計作業時間: {formatMinutes(task.actual_minutes ?? 0)}
+</p>
+
+{task.current_timer_started_at && (
+  <p className="text-xs text-green-400">
+    計測中: {formatRunningTime(task.current_timer_started_at, now)}
+  </p>
+)}
+
+<div className="grid gap-2">
+  {task.current_timer_started_at ? (
+    <button
+      onClick={() => onStopTimer(task)}
+      className="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-bold hover:bg-red-500"
+    >
+      停止して記録
+    </button>
+  ) : (
+    <button
+      onClick={() => onStartTimer(task.id)}
+      className="w-full rounded-lg bg-green-600 px-3 py-2 text-sm font-bold hover:bg-green-500"
+    >
+      作業開始
+    </button>
+  )}
+
+ {!task.current_timer_started_at && (
+  <button
+    onClick={() => onChangeStatus(task.id, nextStatus)}
+    className="w-full rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800"
+  >
+    {nextLabel}
+  </button>
+)}
+</div>
             </div>
           ))}
         </div>
