@@ -500,10 +500,21 @@ const doneTasks = childTasks
             key={parentTask.id}
             className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-4"
           >
-           <div>
-  <p className="text-xs text-blue-400 font-semibold">大タスク</p>
-  <h3 className="text-2xl font-bold">{parentTask.title}</h3>
+           
+<div className="flex items-start justify-between gap-4">
+  <div>
+    <p className="text-xs text-blue-400 font-semibold">大タスク</p>
+    <h3 className="text-2xl font-bold">{parentTask.title}</h3>
+  </div>
+
+  <button
+    onClick={() => deleteTask(parentTask.id)}
+    className="rounded-lg border border-red-500 px-3 py-2 text-sm text-red-400 hover:bg-red-950"
+  >
+    大タスク削除
+  </button>
 </div>
+
 
             <div className="grid gap-4 md:grid-cols-3">
               <TaskColumn
@@ -591,7 +602,6 @@ type TaskColumnProps = {
   onDeleteTask: (taskId: string) => void;
   now: Date;
 };
-``
 
 function TaskColumn({
   title,
