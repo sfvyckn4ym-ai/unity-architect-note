@@ -125,7 +125,7 @@ export default function ProjectsPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
-              placeholder="例：吹っ飛ばしアクションゲーム"
+              placeholder="例：アクションゲーム"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
             />
