@@ -163,6 +163,12 @@ export default function ProjectsPage() {
       </p>
     </Link>
 
+
+<p className="font-mono text-xs text-slate-500 break-all">
+  ID: {project.id}
+</p>
+
+
     <button
       onClick={() => deleteProject(project.id)}
       className="rounded-lg border border-red-500 px-4 py-2 text-sm text-red-400 hover:bg-red-950"
